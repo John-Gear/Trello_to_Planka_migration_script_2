@@ -5,6 +5,7 @@ import os
 from migrator import log_message
 import webbrowser
 import threading
+import traceback
 
 # Global variables (used by migrator.py)
 PLANKA_URL = ""
@@ -38,12 +39,24 @@ def start_migration():
     log_box.delete("1.0", tk.END)
 
     def run_migration():
-        try:
-            migrator.migrate_workspaces()
-            log_box.see(tk.END)
-            messagebox.showinfo("Done", "Migration completed successfully.")
-        except Exception as e:
-            messagebox.showerror("Error", f"Something went wrong:\n{str(e)}")
+        while True:
+            try:
+                migrator.migrate_workspaces()
+                log_box.see(tk.END)
+                messagebox.showinfo("Done", "Migration completed successfully.")
+                break
+            except Exception as e:
+                tb = traceback.format_exc()
+                log_box.insert(tk.END, f"Error:\n{tb}\n")
+                log_box.see(tk.END)
+                result = messagebox.askretrycancel(
+                    "Error",
+                    f"Something went wrong:\n{str(e)}\n\nFull traceback is shown in the log.\n\nRetry (try again) or Cancel (ignore this error and continue)?"
+                )
+                if result:
+                    continue  # Retry the operation
+                else:
+                    break     # Ignore the error and continue
 
     threading.Thread(target=run_migration).start()
 

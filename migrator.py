@@ -471,6 +471,10 @@ def migrate_attachments(token, card_id_planka, card_id_trello):
         if len(raw_file_name) > MAX_FILENAME_LENGTH:
             raw_file_name = raw_file_name[:MAX_FILENAME_LENGTH] + "..."
         file_name_translit = transliterate_filename(raw_file_name)
+        # Remove invalid filename characters for Windows
+        invalid_chars = r'<>:"/\|?*'
+        for ch in invalid_chars:
+            file_name_translit = file_name_translit.replace(ch, "_")
 
         file_path = os.path.join(tempfile.gettempdir(), file_name_translit)
         if len(file_path) > 255:
@@ -492,7 +496,11 @@ def migrate_attachments(token, card_id_planka, card_id_trello):
 
         try:
             planka_attachment = add_attachment(token, card_id_planka, file_path, None)
-            planka_attachments[attachment_id] = planka_attachment["id"]
+            if planka_attachment is not None:
+                planka_attachments[attachment_id] = planka_attachment["id"]
+            else:
+                log_message(f"Failed to upload attachment '{raw_file_name}' to card")
+                continue
         except requests.exceptions.RequestException:
             log_message(f"Failed to upload attachment '{raw_file_name}' to card")
             continue
