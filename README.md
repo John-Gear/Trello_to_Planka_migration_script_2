@@ -47,9 +47,10 @@ Below is an example of the application interface where you can enter data for mi
 1. Go to [Trello Power-Ups](https://trello.com/power-ups/admin).
 2. Click "Power-Ups" → "Create New".
 3. Enter organization information.
-4. Click "Generate new API key" and save it.
-5. Click "Manually generate token" and grant access. Save it.
-
+4. Click "Create" and save it.
+5. Copy the API-Key from the Power-Up you have created.
+6. Open this URL to optain your Token (You have to login into the desired Trello Account): https://trello.com/1/authorize?expiration=never&name=PlankaMigrator&scope=read,write&response_type=token&key=YOUR_API_KEY
+7. Copy the generated Token that will be shown after successfull Login.
 ---
 
 ## 2. Build the GUI yourself (for advanced users, Mac/Linux users, or if you don’t trust third-party .exe files)
