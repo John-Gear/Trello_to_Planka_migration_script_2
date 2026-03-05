@@ -24,6 +24,13 @@ def log_message(message):
 
 # Functions for working with api Trello 
 
+
+APIKEY = ""
+APITOKEN = ""
+TRELLO_URL = "https://api.trello.com/1/"  # constant
+PLANKA_APIKEY = ""
+PLANKA_URL = ""
+
 # Function: get a list of Trello workspaces
 def get_workspaces():
     url = f"{TRELLO_URL}members/me/organizations"
@@ -106,30 +113,17 @@ def get_card_cover_attachment_id(card_id):
 
 # Functions for working with api Planka
 
-# Function: authenticate and retrieve a Bearer token for Planka
-def get_token():
-    url = f"{PLANKA_URL}/access-tokens"
-    payload = {"emailOrUsername": USERNAME, "password": PASSWORD}
-    headers = {"Content-Type": "application/json"}
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        data = response.json()
-        for key in ["token", "item", "id"]:
-            if key in data:
-                return data[key]
-    except requests.RequestException as e:
-        log_message(f"Error while retrieving token: {e}")
-        return None
-    return None
+## Planka API: теперь используется X-Api-Key
+def get_planka_headers():
+    return {
+        "Content-Type": "application/json",
+        "X-Api-Key": PLANKA_APIKEY,
+    }
 
 # Function: create a project in Planka based on Trello workspace
-def create_planka_project(trello_ws, token):
+def create_planka_project(trello_ws):
     url = f"{PLANKA_URL}/projects"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}",
-    }
+    headers = get_planka_headers()
 
     description = trello_ws.get("name", "")
     if not description.strip():
@@ -152,12 +146,9 @@ def create_planka_project(trello_ws, token):
         return None
 
 # Function: create a board in Planka for the given project
-def create_planka_board(project_id, project_name, board_data, token, position=65536):
+def create_planka_board(project_id, project_name, board_data, position=65536):
     url = f"{PLANKA_URL}/projects/{project_id}/boards"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}",
-    }
+    headers = get_planka_headers()
 
     name = board_data.get("name", "Unnamed Board")[:128]
 
@@ -177,12 +168,9 @@ def create_planka_board(project_id, project_name, board_data, token, position=65
         return None
 
 # Function: create a list in Planka for the given board
-def create_planka_list(board_id, board_name, list_data, token, position=65536):
+def create_planka_list(board_id, board_name, list_data, position=65536):
     url = f"{PLANKA_URL}/boards/{board_id}/lists"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}",
-    }
+    headers = get_planka_headers()
 
     name = list_data.get("name", "Unnamed List")[:128]
 
@@ -203,12 +191,9 @@ def create_planka_list(board_id, board_name, list_data, token, position=65536):
         return None
 
 # Function: create a card in Planka under a specified list
-def create_planka_card(list_id, list_name, card_data, token, position=65536):
+def create_planka_card(list_id, list_name, card_data, position=65536):
     url = f"{PLANKA_URL}/lists/{list_id}/cards"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}",
-    }
+    headers = get_planka_headers()
 
     name = card_data.get("name", "Unnamed Card")[:1024]
     description = card_data.get("desc", "")
@@ -238,7 +223,7 @@ def create_planka_card(list_id, list_name, card_data, token, position=65536):
         return None
 
 # Function: create a comment in a Planka card (with optional Trello metadata)
-def create_planka_comment(card_id, comment_text, token, author_name=None, author_username=None, date=None):
+def create_planka_comment(card_id, comment_text, author_name=None, author_username=None, date=None):
     if author_name and author_username and date:
         try:
             formatted_date = datetime.datetime.fromisoformat(date.replace("Z", "")).strftime("%d-%m-%Y %H:%M:%S")
@@ -252,10 +237,7 @@ def create_planka_comment(card_id, comment_text, token, author_name=None, author
 {formatted_date}"""
 
     url = f"{PLANKA_URL}/cards/{card_id}/comments"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}",
-    }
+    headers = get_planka_headers()
     payload = {
         "text": comment_text[:1048576],
     }
@@ -271,12 +253,9 @@ def create_planka_comment(card_id, comment_text, token, author_name=None, author
         return None
 
 # Function: create a checklist in a Planka card
-def create_planka_task_list(card_id, checklist_data, token, position=65536):
+def create_planka_task_list(card_id, checklist_data, position=65536):
     url = f"{PLANKA_URL}/cards/{card_id}/task-lists"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}",
-    }
+    headers = get_planka_headers()
 
     name = checklist_data.get("name", "Unnamed Checklist")[:128]
 
@@ -297,12 +276,9 @@ def create_planka_task_list(card_id, checklist_data, token, position=65536):
         return None
 
 # Function: create a task in a checklist in Planka
-def create_planka_task(task_list_id, item_data, token, position=65536):
+def create_planka_task(task_list_id, item_data, position=65536):
     url = f"{PLANKA_URL}/task-lists/{task_list_id}/tasks"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}",
-    }
+    headers = get_planka_headers()
 
     name = item_data.get("name", "Unnamed Task")[:1024]
 
@@ -323,9 +299,9 @@ def create_planka_task(task_list_id, item_data, token, position=65536):
         return None
 
 # Function: create a label in Planka (if it does not exist)
-def create_label(token, board_id, name, color, position):
+def create_label(board_id, name, color, position):
     url = f"{PLANKA_URL}/boards/{board_id}/labels"
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = get_planka_headers()
     data = {
         "name": name if name else None,
         "color": color,
@@ -342,9 +318,9 @@ def create_label(token, board_id, name, color, position):
     return None
 
 # Function: bind an existing label to a card in Planka
-def add_label_to_card(token, card_id, label_id, name, color):
+def add_label_to_card(card_id, label_id, name, color):
     url = f"{PLANKA_URL}/cards/{card_id}/card-labels"
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = get_planka_headers()
     data = {"labelId": label_id}
     response = requests.post(url, headers=headers, json=data)
     if response.ok:
@@ -356,9 +332,9 @@ def add_label_to_card(token, card_id, label_id, name, color):
     return False
 
 # Function: creating card attachments in Planka
-def add_attachment(token, card_id, file_path, original_date):
+def add_attachment(card_id, file_path, original_date):
     url = f"{PLANKA_URL}/cards/{card_id}/attachments"
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"X-Api-Key": PLANKA_APIKEY}
     filename = os.path.basename(file_path)
 
     with open(file_path, "rb") as file:
@@ -387,12 +363,9 @@ def transliterate_filename(filename):
     return safe_name + ext
 
 # Function: update or remove a card cover in Planka (if a cover was found in the original Trello card)
-def update_card_cover(token, card_id, cover_attachment_id):
+def update_card_cover(card_id, cover_attachment_id):
     url = f"{PLANKA_URL}/cards/{card_id}"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
+    headers = get_planka_headers()
     payload = {
         "coverAttachmentId": cover_attachment_id if cover_attachment_id else None
     }
@@ -428,7 +401,7 @@ def get_planka_label_color(trello_color):
 
 # Function: migrate labels from Trello to Planka while preserving their order
 label_cache = {}  # Global cache to avoid creating duplicate labels
-def migrate_card_labels(token, board_id, card_id_planka, card_trello):
+def migrate_card_labels(board_id, card_id_planka, card_trello):
     global label_cache
 
     labels = card_trello.get("labels", [])
@@ -447,17 +420,17 @@ def migrate_card_labels(token, board_id, card_id_planka, card_trello):
         if label_key in label_cache:
             label_id = label_cache[label_key]
         else:
-            new_label = create_label(token, board_id, label_name, planka_color, position)
+            new_label = create_label(board_id, label_name, planka_color, position)
             if not new_label:
                 log_message(f"Failed to create label '{label_name}' ({planka_color})")
                 continue
             label_id = new_label["id"]
             label_cache[label_key] = label_id
 
-        add_label_to_card(token, card_id_planka, label_id, label_name, planka_color)
+        add_label_to_card(card_id_planka, label_id, label_name, planka_color)
 
 # Function: transfers attachments from Trello to Planka, preserving the cover if applicable
-def migrate_attachments(token, card_id_planka, card_id_trello):
+def migrate_attachments(card_id_planka, card_id_trello):
     attachments = get_card_attachments(card_id_trello, APIKEY, APITOKEN)
     cover_attachment_id = get_card_cover_attachment_id(card_id_trello)
 
@@ -495,7 +468,7 @@ def migrate_attachments(token, card_id_planka, card_id_trello):
             continue
 
         try:
-            planka_attachment = add_attachment(token, card_id_planka, file_path, None)
+            planka_attachment = add_attachment(card_id_planka, file_path, None)
             if planka_attachment is not None:
                 planka_attachments[attachment_id] = planka_attachment["id"]
             else:
@@ -509,7 +482,7 @@ def migrate_attachments(token, card_id_planka, card_id_trello):
 
     cover_planka_id = planka_attachments.get(cover_attachment_id)
     if cover_planka_id:
-        update_card_cover(token, card_id_planka, cover_planka_id)
+        update_card_cover(card_id_planka, cover_planka_id)
     else:
         log_message(f"Cover not set: no corresponding attachment found")
 
@@ -521,16 +494,14 @@ def migrate_workspaces():
     trello_workspaces = get_workspaces()
     log_message(f"Retrieved workspaces: {len(trello_workspaces)}")
 
-    token = get_token()
-    if token:
-        log_message("Bearer token successfully obtained")
-    else:
-        log_message("Failed to obtain token")
+    # Planka теперь использует только API KEY
+    if not PLANKA_APIKEY:
+        log_message("Planka API Key не указан!")
         return
 
     for ws in trello_workspaces:
         log_message(f"\nMigrating workspace: {ws.get('displayName')}")
-        project = create_planka_project(ws, token)
+        project = create_planka_project(ws)
         if not project:
             log_message(f"Failed to create project for workspace: {ws.get('displayName')}")
             continue
@@ -540,7 +511,7 @@ def migrate_workspaces():
 
         for idx, board in enumerate(boards):
             position = (idx + 1) * 65536
-            planka_board = create_planka_board(project["id"], ws["displayName"], board, token, position)
+            planka_board = create_planka_board(project["id"], ws["displayName"], board, position=position)
             if not planka_board:
                 log_message(f"Skipped board: {board.get('name')}")
                 continue
@@ -550,7 +521,7 @@ def migrate_workspaces():
 
             for i, trello_list in enumerate(trello_lists):
                 list_position = (i + 1) * 65536
-                planka_list = create_planka_list(planka_board["id"], board["name"], trello_list, token, list_position)
+                planka_list = create_planka_list(planka_board["id"], board["name"], trello_list, position=list_position)
                 if not planka_list:
                     log_message(f"Skipped list: {trello_list.get('name')}")
                     continue
@@ -560,27 +531,27 @@ def migrate_workspaces():
 
                 for j, trello_card in enumerate(trello_cards):
                     card_position = (j + 1) * 65536
-                    planka_card = create_planka_card(planka_list["id"], trello_list["name"], trello_card, token, card_position)
+                    planka_card = create_planka_card(planka_list["id"], trello_list["name"], trello_card, position=card_position)
                     if not planka_card:
                         log_message(f"Skipped card: {trello_card.get('name')}")
                         continue
 
-                    migrate_attachments(token, planka_card["id"], trello_card["id"])
-                    migrate_card_labels(token, planka_board["id"], planka_card["id"], trello_card)
+                    migrate_attachments(planka_card["id"], trello_card["id"])
+                    migrate_card_labels(planka_board["id"], planka_card["id"], trello_card)
 
                     checklists = get_card_checklists(trello_card["id"])
                     if checklists:
                         log_message(f"Checklists found in card '{trello_card.get('name')}': {len(checklists)}")
                         for k, checklist in enumerate(checklists):
                             checklist_position = (k + 1) * 65536
-                            planka_task_list = create_planka_task_list(planka_card["id"], checklist, token, checklist_position)
+                            planka_task_list = create_planka_task_list(planka_card["id"], checklist, position=checklist_position)
                             if not planka_task_list:
                                 log_message(f"Failed to create checklist: {checklist.get('name')}")
                                 continue
 
                             for m, item in enumerate(checklist.get("checkItems", [])):
                                 task_position = (m + 1) * 65536
-                                create_planka_task(planka_task_list["id"], item, token, task_position)
+                                create_planka_task(planka_task_list["id"], item, position=task_position)
                             
                     comments = get_card_comments(trello_card["id"])
                     for comment in reversed(comments):
@@ -591,7 +562,6 @@ def migrate_workspaces():
                             create_planka_comment(
                                 planka_card["id"],
                                 text,
-                                token,
                                 author_name=author.get("fullName"),
                                 author_username=author.get("username"),
                                 date=comment.get("date")

@@ -9,28 +9,27 @@ import traceback
 
 # Global variables (used by migrator.py)
 PLANKA_URL = ""
-USERNAME = ""
-PASSWORD = ""
+PLANKA_APIKEY = ""
 APIKEY = ""
 APITOKEN = ""
 TRELLO_URL = "https://api.trello.com/1/"  # constant
 
 # Start migration and pass input values
 def start_migration():
-    global PLANKA_URL, USERNAME, PASSWORD, APIKEY, APITOKEN
+    global PLANKA_URL, PLANKA_APIKEY, APIKEY, APITOKEN
 
     PLANKA_URL = planka_url_entry.get().strip()
+    if PLANKA_URL.endswith("/"):
+        PLANKA_URL = PLANKA_URL[:-1]
     if not PLANKA_URL.endswith("/api"):
         PLANKA_URL += "/api"
 
-    USERNAME = username_entry.get().strip()
-    PASSWORD = password_entry.get().strip()
+    PLANKA_APIKEY = planka_apikey_entry.get().strip()
     APIKEY = apikey_entry.get().strip()
     APITOKEN = apitoken_entry.get().strip()
 
     migrator.PLANKA_URL = PLANKA_URL
-    migrator.USERNAME = USERNAME
-    migrator.PASSWORD = PASSWORD
+    migrator.PLANKA_APIKEY = PLANKA_APIKEY
     migrator.APIKEY = APIKEY
     migrator.APITOKEN = APITOKEN
     migrator.TRELLO_URL = TRELLO_URL
@@ -91,8 +90,7 @@ window.geometry("700x670")
 
 fields = [
     ("Planka URL (without /api):", "https://planka.com"),
-    ("Planka Username:", ""),
-    ("Planka Password:", ""),
+    ("Planka API Key:", ""),
     ("Trello API Key:", ""),
     ("Trello API Token:", "")
 ]
@@ -108,7 +106,7 @@ for label_text, default in fields:
     entry.pack(side="left")
     entries.append(entry)
 
-planka_url_entry, username_entry, password_entry, apikey_entry, apitoken_entry = entries
+planka_url_entry, planka_apikey_entry, apikey_entry, apitoken_entry = entries
 for entry in entries:
     add_entry_context_menu(entry)
 
